@@ -1,6 +1,7 @@
 package com.example.indoortracking
 
 import android.content.Context
+import android.graphics.Color
 import android.hardware.SensorEventListener
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -9,40 +10,52 @@ import android.hardware.SensorEvent
 import android.hardware.SensorManager
 import android.support.v4.app.INotificationSideChannel
 import android.widget.TextView
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
+import java.lang.AssertionError
 import java.util.*
 import kotlin.math.max
 import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
-    private var textView : TextView? = null
-    private var textInfo : TextView? = null
+    //値を表示する用のtextView
+    private var textView: TextView? = null
 
     private var strAcc = "加速度センサー\n " +
-            "X: 0\n " +
-            "Y: 0\n " +
+            "X: 0\n" +
+            "Y: 0\n" +
             "Z: 0"
 
     //加速度の配列、重力加速度含む
-    private var gravitationalOrientationValues = Array(3) {0.0F; 0.0F; 0.0F}
-    //パスを通したあとの値
-    private var gravitationalAccelerationValues = Array(3) {0.0F; 0.0F; 0.0F}
+    private var gravitationalOrientationValues = arrayListOf(0F, 0F, 0F) //Array(3) { 0.0F; 0.0F; 0.0F }
+
+    //重力加速度除去後の値
+    private var gravitationalAccelerationValues = arrayListOf(0F, 0F, 0F)//Array(3) { 0.0F; 0.0F; 0.0F }
 
     //差分
     private var dx = 0.0F
     private var dy = 0.0F
     private var dz = 0.0F
+
     //前回の値
     private var x_old = 0.0F
     private var y_old = 0.0F
     private var z_old = 0.0F
+
     //ノイズ除去後の値
     private var xValue = 0.0F
     private var yValue = 0.0F
     private var zValue = 0.0F
+
     //ベクトル量
     private var vectorSize = 0.0//デフォルトでDouble型
+
     //カウンタ
     var counter = 0L
+
     //カウントフラグ(一回の揺れで２回以上のカウント防止)
     private var counted = false
 
@@ -53,6 +66,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     //ノイズ除去
     private var noiseflg = true
+
     //ベクトル量_Max
     private var vectorSize_max = 0.0;
 
@@ -65,12 +79,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         const val alpha = 0.85F
     }
 
+    //グラフ全体
+    private var mChart: LineChart? = null
+
+    //各要素
+    private val names = arrayListOf("x-value", "y_value", "z_value")//Array(3) { "x-value"; "y-value"; "z-value" }
+    private val colors = arrayListOf(Color.RED, Color.GREEN, Color.BLUE)//Array(3) { Color.RED; Color.GREEN; Color.BLUE }
+    private var accValues = arrayListOf(0F, 0F, 0F)//Array(3){0.0F; 0.0F; 0.0f}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         // Get an instance of the TextView
         textView = findViewById(R.id.acc_value)
+        //LineChartビューにLineData型のインスタンス
+        mChart = findViewById(R.id.lineChart)
+        //表のタイトルを消す
+        mChart?.setDescription("")
+        //Line型インスタンスの追加
+        mChart?.data = LineData()
     }
 
     override fun onResume() {
@@ -80,7 +108,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         //Get accelerometer sensor instance
         val accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         //make callback method
-        sensorManager.registerListener(this, accSensor, SensorManager.SENSOR_DELAY_GAME)
+        sensorManager.registerListener(this, accSensor, SensorManager.SENSOR_DELAY_UI)
     }
 
     override fun onPause() {
@@ -93,16 +121,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onSensorChanged(event: SensorEvent?) {
 
         event?.let {
-            when(event.sensor.type) {
+            when (event.sensor.type) {
                 Sensor.TYPE_ACCELEROMETER -> {
                     //重力加速度を抽出
-                    for(i in 0..2) {
+                    for (i in 0..2) {
                         gravitationalOrientationValues[i] =
-                                event.values[i] * (1-alpha) + gravitationalOrientationValues[i] * alpha
+                            event.values[i] * (1 - alpha) + gravitationalOrientationValues[i] * alpha
 
                         //重力加速度を除く
                         gravitationalAccelerationValues[i] =
-                                event.values[i] - gravitationalOrientationValues[i]
+                            event.values[i] - gravitationalOrientationValues[i]
                     }
                     //差分を計算
                     dx = gravitationalAccelerationValues[0] - x_old
@@ -110,9 +138,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     dz = gravitationalAccelerationValues[2] - z_old
 
                     //RCフィルタをかける
-                    xValue = ((1-alpha)*gravitationalAccelerationValues[0] + alpha*x_old).toFloat()
-                    yValue = ((1-alpha)*gravitationalAccelerationValues[1] + alpha*y_old).toFloat()
-                    zValue = ((1-alpha)*gravitationalAccelerationValues[2] + alpha*z_old).toFloat()
+                    xValue = ((1-alpha)*gravitationalAccelerationValues[0] + alpha*xValue).toFloat()
+                    yValue = ((1-alpha)*gravitationalAccelerationValues[1] + alpha*yValue).toFloat()
+                    zValue = ((1-alpha)*gravitationalAccelerationValues[2] + alpha*zValue).toFloat()
+
                     //切り捨てる
                     xValue = String.format("%.4f", xValue).toFloat()
                     yValue = String.format("%.4f", yValue).toFloat()
@@ -120,14 +149,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
                     //ベクトルの大きさを計算
                     //vectorSize = sqrt((dx*dx + dy*dy + dz*dz).toDouble())
-                    vectorSize = sqrt((xValue*xValue + yValue*yValue + zValue*zValue).toDouble())
+                    vectorSize =
+                        sqrt((xValue * xValue + yValue * yValue + zValue * zValue).toDouble())
 
-                    //ノイズになりやすい1回目は除く
-                    if (noiseflg){
-                        noiseflg = false
-                    }
-                    else{
-                        if(vectorSize > THRESHOLD /*&& dz < 0.0F*/){
+                    if (vectorSize > THRESHOLD /*&& dz < 0.0F*/) {
 //                            if (true/*counted*/) {
 ////                                counted = false
 //                                //最大値なら格納
@@ -136,13 +161,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 //                            else if(!counted){
 //                                counted = true
 //                            }
-                        }
-                        else{
-                            xValue = 0.0000F
-                            yValue = 0.0000F
-                            zValue = 0.0000F
-                        }
+                    } else {
+                        xValue = 0.0000F
+                        yValue = 0.0000F
+                        zValue = 0.0000F
                     }
+
 
                     strAcc = "加速度センサー\n " +
                             "X: $xValue\n " +
@@ -155,8 +179,43 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     z_old = gravitationalAccelerationValues[2]
 
                     textView?.text = strAcc
+
+                    //グラフへのデータ追加
+                    accValues = arrayListOf(xValue, yValue, zValue)//{xValue; yValue; zValue}
+                    val data:LineData? = mChart?.lineData
+                    data?.let {
+                        for (i in 0..2){
+                            var set:ILineDataSet? = data.getDataSetByIndex(i)
+                            if(set == null){
+                                set = createSet(names[i], colors[i])
+                                data.addDataSet(set)
+                            }
+                            //データ追加
+                            data.addEntry(Entry(set.entryCount.toFloat(), accValues[i]), i)
+                            data.notifyDataChanged()
+                        }
+                        mChart?.run {
+                            //表示更新のために変更を通知
+                            notifyDataSetChanged()
+                            //表示の幅を決定
+                            setVisibleXRangeMaximum(50F)
+                            //表示を最新のデータまで移動
+                            moveViewToX(data.entryCount.toFloat())
+                        }
+                    }
                 }
+                else -> {throw AssertionError()}
             }
+        }
+    }
+
+    //グラフに関する設定
+    private fun createSet(label: String, col: Int): LineDataSet {
+        return LineDataSet(null, label).apply {
+            lineWidth = 2.5f
+            color = col
+            setDrawCircles(false)
+            setDrawValues(false)
         }
     }
 
