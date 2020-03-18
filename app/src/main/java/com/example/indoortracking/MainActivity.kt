@@ -11,17 +11,27 @@ import android.support.v4.app.INotificationSideChannel
 import android.widget.TextView
 import java.util.*
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
     //値を表示する用のtextView
-    private var textView: TextView? = null
+    private var accView: TextView? = null
+    private var magView: TextView? = null
 
     private var strAcc = "加速度センサー\n " +
             "X: 0\n" +
             "Y: 0\n" +
             "Z: 0"
+    private var strMag = "磁気センサー\n" +
+            "X: 0\n" +
+            "Y: 0\n" +
+            "Z: 0"
 
+    //磁気センサーの値
+    private var magneticValues = arrayListOf(0F, 0F, 0F)
+    //磁気センサーが有効化
+    private var validMagnetic = false
     //加速度の配列、重力加速度含む
     private var gravitationalOrientationValues = arrayListOf(0F, 0F, 0F) //Array(3) { 0.0F; 0.0F; 0.0F }
 
@@ -34,14 +44,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var dz = 0.0F
 
     //前回の値
-    private var x_old = 0.0F
-    private var y_old = 0.0F
-    private var z_old = 0.0F
+    private var accOldValues = arrayListOf(0F, 0F, 0F)
 
     //ノイズ除去後の値
-    private var xValue = 0.0F
-    private var yValue = 0.0F
-    private var zValue = 0.0F
+    private var accValues = arrayListOf(0F, 0F, 0F)
 
     //ベクトル量
     private var vectorSize = 0.0//デフォルトでDouble型
@@ -77,7 +83,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setContentView(R.layout.activity_main)
 
         // Get an instance of the TextView
-        textView = findViewById(R.id.acc_value)
+        accView = findViewById(R.id.acc_value)
+//        magView = findViewById(R.id.mag_value)
     }
 
     override fun onResume() {
@@ -86,8 +93,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         //Get accelerometer sensor instance
         val accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        //Get magnetic sensor instance
+//        val magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         //make callback method
         sensorManager.registerListener(this, accSensor, SensorManager.SENSOR_DELAY_UI)
+//        sensorManager.registerListener(this, magSensor, SensorManager.SENSOR_DELAY_UI)
     }
 
     override fun onPause() {
@@ -112,24 +122,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                             event.values[i] - gravitationalOrientationValues[i]
                     }
                     //差分を計算
-                    dx = gravitationalAccelerationValues[0] - x_old
-                    dy = gravitationalAccelerationValues[1] - y_old
-                    dz = gravitationalAccelerationValues[2] - z_old
+                    dx = gravitationalAccelerationValues[0] - accOldValues[0]
+                    dy = gravitationalAccelerationValues[1] - accOldValues[1]
+                    dz = gravitationalAccelerationValues[2] - accOldValues[2]
 
                     //RCフィルタをかける
-                    xValue = ((1-alpha)*gravitationalAccelerationValues[0] + alpha*xValue).toFloat()
-                    yValue = ((1-alpha)*gravitationalAccelerationValues[1] + alpha*yValue).toFloat()
-                    zValue = ((1-alpha)*gravitationalAccelerationValues[2] + alpha*zValue).toFloat()
+                    for ((i, value)  in accValues.withIndex()){
+                        accValues[i] =
+                            ((1- alpha)*gravitationalAccelerationValues[i] + alpha*value)
+                    }
 
                     //切り捨てる
-                    xValue = String.format("%.4f", xValue).toFloat()
-                    yValue = String.format("%.4f", yValue).toFloat()
-                    zValue = String.format("%.4f", zValue).toFloat()
+                    for ((i, value) in accValues.withIndex()){
+                        accValues[i] = String.format("%.4f", value).toFloat()
+                    }
 
                     //ベクトルの大きさを計算
                     //vectorSize = sqrt((dx*dx + dy*dy + dz*dz).toDouble())
                     vectorSize =
-                        sqrt((xValue * xValue + yValue * yValue + zValue * zValue).toDouble())
+                        sqrt((accValues[0].pow(2) + accValues[1].pow(2) + accValues[2].pow(2)).toDouble())
 
                     if (vectorSize > THRESHOLD /*&& dz < 0.0F*/) {
 //                            if (true/*counted*/) {
@@ -142,23 +153,24 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 //                            }
                         }
                         else{
-                            xValue = 0.0000F
-                            yValue = 0.0000F
-                            zValue = 0.0000F
+                            accValues = arrayListOf(0.0000F, 0.0000F, 0.00000F)
                         }
 
                     strAcc = "加速度センサー\n " +
-                            "X: $xValue\n " +
-                            "Y: $yValue\n " +
-                            "Z: $zValue"
+                            "X: ${accValues[0]}\n " +
+                            "Y: ${accValues[1]}\n " +
+                            "Z: ${accValues[2]}"
                     //strAcc = "$vectorSize"
                     //状態保存
-                    x_old = gravitationalAccelerationValues[0]
-                    y_old = gravitationalAccelerationValues[1]
-                    z_old = gravitationalAccelerationValues[2]
+                    for ((i, value) in gravitationalAccelerationValues.withIndex()) {
+                        accOldValues[i] = value
+                    }
 
-                    textView?.text = strAcc
+                    accView?.text = strAcc
                 }
+//                Sensor.TYPE_MAGNETIC_FIELD ->{
+//
+//                }
             }
         }
     }
