@@ -7,9 +7,16 @@
     tools:context=".MainActivity">
 
     <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/lineChart"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:id="@+id/lineChart"/>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0">
+
+    </com.github.mikephil.charting.charts.LineChart>
 
     <TextView
         android:id="@+id/acc_value"
@@ -20,5 +27,25 @@
         tools:ignore="MissingConstraints"
         tools:layout_editor_absoluteX="7dp"
         tools:layout_editor_absoluteY="341dp" />
+
+    <Switch
+        android:id="@+id/lowPass"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:text="lowPass"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Switch
+        android:id="@+id/thresHold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:text="thresHold"
+        app:layout_constraintEnd_toStartOf="@+id/lowPass"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

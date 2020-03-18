@@ -8,7 +8,10 @@ import android.os.Bundle
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorManager
+import android.net.sip.SipSession
 import android.support.v4.app.INotificationSideChannel
+import android.widget.CompoundButton
+import android.widget.Switch
 import android.widget.TextView
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.data.Entry
@@ -16,13 +19,14 @@ import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
 import java.lang.AssertionError
+import java.security.KeyStore
 import java.util.*
 import kotlin.math.max
 import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
     //値を表示する用のtextView
-    private var textView: TextView? = null
+    private lateinit var textView: TextView
 
     private var strAcc = "加速度センサー\n " +
             "X: 0\n" +
@@ -87,10 +91,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val colors = arrayListOf(Color.RED, Color.GREEN, Color.BLUE)//Array(3) { Color.RED; Color.GREEN; Color.BLUE }
     private var accValues = arrayListOf(0F, 0F, 0F)//Array(3){0.0F; 0.0F; 0.0f}
 
+    //lowPassのon,off
+    private var lowPassFlag = true
+    //thresHoldのon,off
+    private var thresHoldFlag = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        //Get an instance of the Switch
+        val lowPassSwitch : Switch = findViewById(R.id.lowPass)
+        val thresHoldSwitch : Switch = findViewById(R.id.thresHold)
+        //switch初期設定
+        lowPassSwitch.isChecked = false
+        thresHoldSwitch.isChecked = true
+        //Flagにon,offを入れる
+        lowPassSwitch.setOnCheckedChangeListener { _, isChecked ->
+            lowPassFlag = isChecked
+        }
+        thresHoldSwitch.setOnCheckedChangeListener {_, isChecked ->
+            thresHoldFlag = isChecked
+        }
         // Get an instance of the TextView
         textView = findViewById(R.id.acc_value)
         //LineChartビューにLineData型のインスタンス
@@ -99,6 +121,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         mChart?.setDescription("")
         //Line型インスタンスの追加
         mChart?.data = LineData()
+    }
+
+    fun onCheckedChangeListener(){
+
     }
 
     override fun onResume() {
@@ -138,9 +164,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     dz = gravitationalAccelerationValues[2] - z_old
 
                     //RCフィルタをかける
-                    xValue = ((1-alpha)*gravitationalAccelerationValues[0] + alpha*xValue).toFloat()
-                    yValue = ((1-alpha)*gravitationalAccelerationValues[1] + alpha*yValue).toFloat()
-                    zValue = ((1-alpha)*gravitationalAccelerationValues[2] + alpha*zValue).toFloat()
+                    if (lowPassFlag) {
+                        xValue =
+                            ((1 - alpha) * gravitationalAccelerationValues[0] + alpha * xValue)
+                        yValue =
+                            ((1 - alpha) * gravitationalAccelerationValues[1] + alpha * yValue)
+                        zValue =
+                            ((1 - alpha) * gravitationalAccelerationValues[2] + alpha * zValue)
+                    }
+
+                    xValue = gravitationalAccelerationValues[0]
+                    yValue = gravitationalAccelerationValues[1]
+                    zValue = gravitationalAccelerationValues[2]
+
 
                     //切り捨てる
                     xValue = String.format("%.4f", xValue).toFloat()
@@ -162,11 +198,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 //                                counted = true
 //                            }
                     } else {
-                        xValue = 0.0000F
-                        yValue = 0.0000F
-                        zValue = 0.0000F
+                        if(thresHoldFlag) {
+                            xValue = 0.0000F
+                            yValue = 0.0000F
+                            zValue = 0.0000F
+                        }
                     }
-
 
                     strAcc = "加速度センサー\n " +
                             "X: $xValue\n " +
