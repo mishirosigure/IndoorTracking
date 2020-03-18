@@ -29,9 +29,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "Z: 0"
 
     //磁気センサーの値
-    private var magneticValues = arrayListOf(0F, 0F, 0F)
+    private var magneticValues = FloatArray(3){0F; 0F; 0F}
     //磁気センサーが有効化
     private var validMagnetic = false
+    //加速度センサーが有効化
+    private var validAcc = false
     //加速度の配列、重力加速度含む
     private var gravitationalOrientationValues = arrayListOf(0F, 0F, 0F) //Array(3) { 0.0F; 0.0F; 0.0F }
 
@@ -69,6 +71,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     //ベクトル量_Max
     private var vectorSize_max = 0.0;
 
+    //傾斜行列
+    var rotate = FloatArray(16)
+    //回転行列
+    var inclination = FloatArray(16)
+
     companion object {
         //閾値
         const val THRESHOLD = 0.2F
@@ -84,7 +91,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         // Get an instance of the TextView
         accView = findViewById(R.id.acc_value)
-//        magView = findViewById(R.id.mag_value)
+        magView = findViewById(R.id.mag_value)
     }
 
     override fun onResume() {
@@ -94,10 +101,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         //Get accelerometer sensor instance
         val accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         //Get magnetic sensor instance
-//        val magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        val magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         //make callback method
         sensorManager.registerListener(this, accSensor, SensorManager.SENSOR_DELAY_UI)
-//        sensorManager.registerListener(this, magSensor, SensorManager.SENSOR_DELAY_UI)
+        sensorManager.registerListener(this, magSensor, SensorManager.SENSOR_DELAY_UI)
     }
 
     override fun onPause() {
@@ -167,10 +174,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     }
 
                     accView?.text = strAcc
+                    validAcc = true
                 }
-//                Sensor.TYPE_MAGNETIC_FIELD ->{
-//
-//                }
+                Sensor.TYPE_MAGNETIC_FIELD ->{
+                    magneticValues = event.values.clone()
+                    strMag = "磁気センサー\n " +
+                            "X: ${magneticValues[0]}\n " +
+                            "Y: ${magneticValues[1]}\n " +
+                            "Z: ${magneticValues[2]}"
+                    magView?.text = strMag
+                    validMagnetic = true
+                }
             }
         }
     }
