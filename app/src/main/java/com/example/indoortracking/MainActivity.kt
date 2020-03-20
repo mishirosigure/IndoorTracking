@@ -2,18 +2,13 @@ package com.example.indoortracking
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.hardware.SensorEventListener
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
 import android.hardware.Sensor
 import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.support.v4.app.INotificationSideChannel
+import android.os.Bundle
 import android.widget.TextView
-import androidx.core.graphics.translationMatrix
-import java.nio.channels.FileLock
-import java.util.*
-import kotlin.math.max
+import androidx.appcompat.app.AppCompatActivity
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -87,7 +82,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         //閾値
         const val THRESHOLD = 0.2F
         const val THRESHOLD_MIN = 0.1F
-
         //ローパスフィルタのα値
         const val alpha = 0.85F
     }
