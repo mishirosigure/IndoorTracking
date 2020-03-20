@@ -7,6 +7,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import kotlin.math.pow
@@ -86,10 +87,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         const val alpha = 0.85F
     }
 
+    //lowPassのon,off
+    private var lowPassFlag = true
+    //thresHoldのon,off
+    private var thresHoldFlag = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        //Get an instance of the Switch
+        val lowPassSwitch : Switch = findViewById(R.id.lowPass)
+        val thresHoldSwitch : Switch = findViewById(R.id.thresHold)
+        //switch初期設定
+        lowPassSwitch.isChecked = true
+        thresHoldSwitch.isChecked = false
+        //Flagにon,offを入れる
+        lowPassSwitch.setOnCheckedChangeListener { _, isChecked ->
+            lowPassFlag = isChecked
+        }
+        thresHoldSwitch.setOnCheckedChangeListener {_, isChecked ->
+            thresHoldFlag = isChecked
+        }
         // Get an instance of the TextView
         accView = findViewById(R.id.acc_value)
         magView = findViewById(R.id.mag_value)
@@ -217,8 +236,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
     //RCフィルタ用関数
     private fun lowpassFilter(oldValues:FloatArray , values:FloatArray) : FloatArray{
-        for (i in values.indices){
-            values[i] = (1- alpha)*values[i] + alpha*oldValues[i]
+        if (lowPassFlag) {
+            for (i in values.indices) {
+                values[i] = (1 - alpha) * values[i] + alpha * oldValues[i]
+            }
         }
         return values
     }
