@@ -7,16 +7,23 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.os.Environment
+import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlin.math.pow
 import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
+    private val filePath = "${Environment.getExternalStorageDirectory()}/csvText.csv"
+    //保存するか
+    private var saveFlag = false
+
     //値を表示する用のtextView
     private var accView: TextView? = null
     private var magView: TextView? = null
-    private var angeleView : TextView? = null
+    private var angeleView: TextView? = null
 
     private var strAcc = "加速度センサー\n " +
             "X: 0\n" +
@@ -28,17 +35,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "Z: 0"
 
     //磁気センサーの値
-    private var magneticValues = floatArrayOf(0F,0F,0F)
+    private var magneticValues = floatArrayOf(0F, 0F, 0F)
+
     //前回の値
-    private var magneticOldValues = floatArrayOf(0F,0F,0F)
+    private var magneticOldValues = floatArrayOf(0F, 0F, 0F)
+
     //磁気センサーが有効化
     private var validMagnetic = false
+
     //加速度センサーが有効化
     private var validAcc = false
+
     //加速度の配列、重力加速度含む
-    private var gravitationalOrientationValues = floatArrayOf(0F,0F,0F)
+    private var gravitationalOrientationValues = floatArrayOf(0F, 0F, 0F)
+
     //重力加速度除去後の値
-    private var gravitationalAccelerationValues = floatArrayOf(0F,0F,0F)
+    private var gravitationalAccelerationValues = floatArrayOf(0F, 0F, 0F)
 
     //差分
     private var dx = 0.0F
@@ -46,10 +58,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var dz = 0.0F
 
     //前回の値
-    private var accOldValues = floatArrayOf(0F,0F,0F)
+    private var accOldValues = floatArrayOf(0F, 0F, 0F)
 
     //ノイズ除去後の値
-    private var accValues = floatArrayOf(10.12F,0F,0F)
+    private var accValues = floatArrayOf(10.12F, 0F, 0F)
 
     //ベクトル量
     private var vectorSize = 0.0//デフォルトでDouble型
@@ -73,27 +85,59 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     //傾斜行列
     private var rotate = FloatArray(16)
+
     //回転行列
     private var inclination = FloatArray(16)
+
     //方向
-    private var orientation =FloatArray(3)
+    private var orientation = FloatArray(3)
 
     companion object {
         //閾値
         const val THRESHOLD = 0.2F
         const val THRESHOLD_MIN = 0.1F
+
         //ローパスフィルタのα値
         const val alpha = 0.85F
     }
+
+    //lowPassのon,off
+    private var lowPassFlag = true
+
+    //thresHoldのon,off
+    private var thresHoldFlag = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        //Get an instance of the Switch
+        val lowPassSwitch: Switch = findViewById(R.id.lowPass)
+        val thresHoldSwitch: Switch = findViewById(R.id.thresHold)
+        //switch初期設定
+        lowPassSwitch.isChecked = true
+        thresHoldSwitch.isChecked = false
+        //Flagにon,offを入れる
+        lowPassSwitch.setOnCheckedChangeListener { _, isChecked ->
+            lowPassFlag = isChecked
+        }
+        thresHoldSwitch.setOnCheckedChangeListener { _, isChecked ->
+            thresHoldFlag = isChecked
+        }
         // Get an instance of the TextView
         accView = findViewById(R.id.acc_value)
         magView = findViewById(R.id.mag_value)
         angeleView = findViewById(R.id.angele_value)
+        //Buttonのリスナー
+        saveButton.setOnCheckedChangeListener { _, isChecked ->
+            if(isChecked){
+                saveFlag = true
+            }
+            else{
+                stopRecord()
+                saveFlag = false
+            }
+        }
     }
 
     override fun onResume() {
@@ -125,11 +169,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     //重力加速度を抽出
                     for (i in event.values.indices) {
                         gravitationalOrientationValues[i] =
-                        event.values[i] * (1 - alpha) + gravitationalOrientationValues[i] * alpha
+                            event.values[i] * (1 - alpha) + gravitationalOrientationValues[i] * alpha
 
 //                        重力加速度を除く
                         gravitationalAccelerationValues[i] =
-                        event.values[i] - gravitationalOrientationValues[i]
+                            event.values[i] - gravitationalOrientationValues[i]
 
                         accValues[i] = event.values[i]
                     }
@@ -150,7 +194,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     //ベクトルの大きさを計算
                     //vectorSize = sqrt((dx*dx + dy*dy + dz*dz).toDouble())
                     vectorSize =
-                        sqrt((gravitationalAccelerationValues[0].pow(2) + gravitationalAccelerationValues[1].pow(2) + gravitationalAccelerationValues[2].pow(2)).toDouble())
+                        sqrt(
+                            (gravitationalAccelerationValues[0].pow(2) + gravitationalAccelerationValues[1].pow(
+                                2
+                            ) + gravitationalAccelerationValues[2].pow(2)).toDouble()
+                        )
 
                     if (true/*vectorSize > THRESHOLD*/ /*dz < 0.0F*/) {
 //                            if (true/*counted*/) {
@@ -161,8 +209,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 //                            else if(!counted){
 //                                counted = true
 //                            }
-                    }
-                    else{
+                    } else {
                         accValues = floatArrayOf(0.0000F, 0.0000F, 0.0000F)
                     }
 
@@ -179,7 +226,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 }
 
                 //磁気センサー
-                Sensor.TYPE_MAGNETIC_FIELD ->{
+                Sensor.TYPE_MAGNETIC_FIELD -> {
                     magneticValues = event.values.clone()
                     magneticValues = lowpassFilter(magneticOldValues, magneticValues)
                     magneticValues = truncation(magneticValues)
@@ -192,7 +239,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     magneticOldValues = magneticValues
                 }
             }
-            if(validAcc && validMagnetic){
+            if (validAcc && validMagnetic) {
                 SensorManager.getRotationMatrix(
                     rotate, inclination, accValues, magneticValues
                 )
@@ -209,18 +256,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     //切り捨てる関数
-    private fun truncation(values:FloatArray) : FloatArray{
-        for (i in values.indices){
+    private fun truncation(values: FloatArray): FloatArray {
+        for (i in values.indices) {
             values[i] = String.format("%.4f", values[i]).toFloat()
         }
         return values
     }
+
     //RCフィルタ用関数
-    private fun lowpassFilter(oldValues:FloatArray , values:FloatArray) : FloatArray{
-        for (i in values.indices){
-            values[i] = (1- alpha)*values[i] + alpha*oldValues[i]
+    private fun lowpassFilter(oldValues: FloatArray, values: FloatArray): FloatArray {
+        if (lowPassFlag) {
+            for (i in values.indices) {
+                values[i] = (1 - alpha) * values[i] + alpha * oldValues[i]
+            }
         }
         return values
+    }
+    //値記録関数
+    private fun stopRecord(){
+
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
