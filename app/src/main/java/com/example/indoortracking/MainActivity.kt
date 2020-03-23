@@ -12,14 +12,20 @@ import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
+import java.io.File
+import java.io.FileWriter
+import java.io.IOException
 import kotlin.math.pow
 import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
-    private val filePath = "${Environment.getExternalStorageDirectory()}/csvText.csv"
+    private val accPath = "${Environment.getExternalStorageDirectory().path}/Evin/acc.csv"
     //保存するか
     private var saveFlag = false
-
+    //センサー値のを格納
+    private var accBuffer = StringBuilder()
+    //書き込み用ファイル
+    private var accFile: File? = null
     //値を表示する用のtextView
     private var accView: TextView? = null
     private var magView: TextView? = null
@@ -128,16 +134,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         accView = findViewById(R.id.acc_value)
         magView = findViewById(R.id.mag_value)
         angeleView = findViewById(R.id.angele_value)
+        //ファイル関係の
+        accFile = File(accPath)
         //Buttonのリスナー
         saveButton.setOnCheckedChangeListener { _, isChecked ->
             if(isChecked){
-                saveFlag = true
+                startRecord()
             }
             else{
                 stopRecord()
-                saveFlag = false
             }
         }
+
     }
 
     override fun onResume() {
@@ -223,6 +231,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
                     accView?.text = strAcc
                     validAcc = true
+                    if (saveFlag) {
+                        accBuffer.append("${accValues[1]},")
+                    }
                 }
 
                 //磁気センサー
@@ -273,8 +284,24 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         return values
     }
     //値記録関数
+    private fun startRecord(){
+        accFile?.run {
+            if (exists()) {
+                delete()
+            }
+        }
+        saveFlag = true
+    }
     private fun stopRecord(){
-
+        try {
+            val fileWriter = FileWriter(accPath)
+            fileWriter.write(accBuffer.toString())
+            fileWriter.flush()
+            fileWriter.close()
+        }catch (e : IOException){
+            e.printStackTrace()
+        }
+        saveFlag = false
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
