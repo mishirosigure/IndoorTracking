@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -17,7 +18,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     //値を表示する用のtextView
     private var accView: TextView? = null
     private var magView: TextView? = null
-    private var angeleView : TextView? = null
+    private var angeleView: TextView? = null
+    private var diffreanceView: TextView? = null
 
     private var strAcc = "加速度センサー\n " +
             "X: 0\n" +
@@ -81,7 +83,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     companion object {
         //閾値
-        const val THRESHOLD = 0.2F
+        const val THRESHOLD = 0.23F
         const val THRESHOLD_MIN = 0.1F
         //ローパスフィルタのα値
         const val alpha = 0.85F
@@ -90,7 +92,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     //lowPassのon,off
     private var lowPassFlag = true
     //thresHoldのon,off
-    private var thresHoldFlag = true
+    private var thresHoldFlag = false
+
+    private var oldvalue = 0F
+    //speed
+    private var speed = 0F
+    private var oldSpeed = 0F
+    //距離
+    private var difference = 0F
+    //SensorDelay
+    private var sensorDelay = 100000
+
+    private var measure = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -113,6 +126,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         accView = findViewById(R.id.acc_value)
         magView = findViewById(R.id.mag_value)
         angeleView = findViewById(R.id.angele_value)
+        diffreanceView = findViewById(R.id.deference_value)
+
+        //Buttonのリスナー
+        saveButton.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                measure = true
+                speed = 0F
+                oldSpeed = 0F
+                difference = 0F
+            }
+            else{
+                measure = false
+            }
+        }
     }
 
     override fun onResume() {
@@ -124,8 +151,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         //Get magnetic sensor instance
         val magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         //make callback method
-        sensorManager.registerListener(this, accSensor, SensorManager.SENSOR_DELAY_UI)
-        sensorManager.registerListener(this, magSensor, SensorManager.SENSOR_DELAY_UI)
+        sensorManager.registerListener(this, accSensor, sensorDelay)//0.1秒で取得
+        sensorManager.registerListener(this, magSensor, sensorDelay)
     }
 
     override fun onPause() {
@@ -149,10 +176,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 //                        重力加速度を除く
                         gravitationalAccelerationValues[i] =
                         event.values[i] - gravitationalOrientationValues[i]
-
-                        accValues[i] = event.values[i]
                     }
 
+
+                    //値を代入
+                    accValues = event.values.clone()
                     //accValues = event.values.clone()
 
                     //差分を計算
@@ -171,9 +199,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     vectorSize =
                         sqrt((gravitationalAccelerationValues[0].pow(2) + gravitationalAccelerationValues[1].pow(2) + gravitationalAccelerationValues[2].pow(2)).toDouble())
 
-                    if (true/*vectorSize > THRESHOLD*/ /*dz < 0.0F*/) {
+                    if (vectorSize > THRESHOLD || !thresHoldFlag /*dz < 0.0F*/) {
 //                            if (true/*counted*/) {
-////                                counted = false
+//                                counted = false
 //                                //最大値なら格納
 //                                //vectorSize_max = max(vectorSize, vectorSize_max)
 //                            }
@@ -182,19 +210,30 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 //                            }
                     }
                     else{
-                        accValues = floatArrayOf(0.0000F, 0.0000F, 0.0000F)
+                        gravitationalAccelerationValues = floatArrayOf(0.0000F, 0.0000F, 0.0000F)
                     }
 
                     strAcc = "加速度センサー\n " +
-                            "X: ${accValues[0]}\n " +
-                            "Y: ${accValues[1]}\n " +
-                            "Z: ${accValues[2]}"
+                            "X: ${gravitationalAccelerationValues[0]}\n " +
+                            "Y: ${gravitationalAccelerationValues[1]}\n " +
+                            "Z: ${gravitationalAccelerationValues[2]}"
                     //strAcc = "$vectorSize"
                     //状態保存
                     accOldValues = accValues
 
                     accView?.text = strAcc
                     validAcc = true
+
+                    if (measure) {
+                        //速度を台形積分
+                        speed += ((gravitationalAccelerationValues[1] + oldvalue) * 0.1F) / 2
+                        oldvalue = gravitationalAccelerationValues[1]
+                        //距離を台形積分
+                        difference += ((speed + oldSpeed) * 0.1F) / 2
+                        oldSpeed = speed
+                        diffreanceView?.text = "速度 : $speed\n" +
+                                "距離 : $difference"
+                    }
                 }
 
                 //磁気センサー
