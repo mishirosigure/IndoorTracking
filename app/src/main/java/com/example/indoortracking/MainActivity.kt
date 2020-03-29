@@ -12,7 +12,6 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlin.math.pow
-import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
     //値を表示する用のtextView
@@ -20,6 +19,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var magView: TextView? = null
     private var angeleView: TextView? = null
     private var diffreanceView: TextView? = null
+    private var higher: TextView? = null
 
     private var strAcc = "加速度センサー\n " +
             "X: 0\n" +
@@ -39,9 +39,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     //加速度センサーが有効化
     private var validAcc = false
     //加速度の配列、重力加速度含む
-    private var gravitationalOrientationValues = floatArrayOf(0F,0F,0F)
+    private var gravitationalOrientationValues = mutableListOf(0F,0F,0F)
     //重力加速度除去後の値
-    private var gravitationalAccelerationValues = floatArrayOf(0F,0F,0F)
+    private var gravitationalAccelerationValues = mutableListOf(0F,0F,0F)
 
     //差分
     private var dx = 0.0F
@@ -83,7 +83,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     companion object {
         //閾値
-        const val THRESHOLD = 0.23F
+        const val THRESHOLD = 0.06F
         const val THRESHOLD_MIN = 0.1F
         //ローパスフィルタのα値
         const val alpha = 0.85F
@@ -127,6 +127,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         magView = findViewById(R.id.mag_value)
         angeleView = findViewById(R.id.angele_value)
         diffreanceView = findViewById(R.id.deference_value)
+        higher = findViewById(R.id.highLow)
 
         //Buttonのリスナー
         saveButton.setOnCheckedChangeListener { _, isChecked ->
@@ -194,12 +195,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     //切り捨てる
                     accValues = truncation(accValues)
 
+                    for (i in gravitationalAccelerationValues.indices){
+                        if (gravitationalAccelerationValues[i].pow(2) < THRESHOLD && thresHoldFlag) {
+                            gravitationalAccelerationValues[i] = 0F
+                        }
+                    }
+
+
                     //ベクトルの大きさを計算
                     //vectorSize = sqrt((dx*dx + dy*dy + dz*dz).toDouble())
-                    vectorSize =
-                        sqrt((gravitationalAccelerationValues[0].pow(2) + gravitationalAccelerationValues[1].pow(2) + gravitationalAccelerationValues[2].pow(2)).toDouble())
-
-                    if (vectorSize > THRESHOLD || !thresHoldFlag /*dz < 0.0F*/) {
+//                    vectorSize =
+//                        sqrt((gravitationalAccelerationValues[0].pow(2) + gravitationalAccelerationValues[1].pow(2) + gravitationalAccelerationValues[2].pow(2)).toDouble())
+//
+//                    if (vectorSize > THRESHOLD || !thresHoldFlag /*dz < 0.0F*/) {
 //                            if (true/*counted*/) {
 //                                counted = false
 //                                //最大値なら格納
@@ -208,10 +216,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 //                            else if(!counted){
 //                                counted = true
 //                            }
-                    }
-                    else{
-                        gravitationalAccelerationValues = floatArrayOf(0.0000F, 0.0000F, 0.0000F)
-                    }
+//                    }
+//                    else{
+//                        gravitationalAccelerationValues = floatArrayOf(0.0000F, 0.0000F, 0.0000F)
+//                    }
 
                     strAcc = "加速度センサー\n " +
                             "X: ${gravitationalAccelerationValues[0]}\n " +
