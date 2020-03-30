@@ -53,10 +53,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var validAcc = false
 
     //加速度の配列、重力加速度含む
-    private var gravitationalOrientationValues = floatArrayOf(0F, 0F, 0F)
-
+    private var gravitationalOrientationValues = mutableListOf(0F,0F,0F)
     //重力加速度除去後の値
-    private var gravitationalAccelerationValues = floatArrayOf(0F, 0F, 0F)
+    private var gravitationalAccelerationValues = mutableListOf(0F,0F,0F)
 
     //差分
     private var dx = 0.0F
@@ -113,6 +112,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     //thresHoldのon,off
     private var thresHoldFlag = true
 
+    private var sensorDelay = 100000
+    private var times = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -157,8 +159,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         //Get magnetic sensor instance
         val magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         //make callback method
-        sensorManager.registerListener(this, accSensor, SensorManager.SENSOR_DELAY_UI)
-        sensorManager.registerListener(this, magSensor, SensorManager.SENSOR_DELAY_UI)
+        sensorManager.registerListener(this, accSensor, sensorDelay)//0.1秒で取得
+        sensorManager.registerListener(this, magSensor, sensorDelay)
     }
 
     override fun onPause() {
@@ -222,9 +224,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     }
 
                     strAcc = "加速度センサー\n " +
-                            "X: ${accValues[0]}\n " +
-                            "Y: ${accValues[1]}\n " +
-                            "Z: ${accValues[2]}"
+                            "X: ${gravitationalAccelerationValues[0]}\n " +
+                            "Y: ${gravitationalAccelerationValues[1]}\n " +
+                            "Z: ${gravitationalAccelerationValues[2]}"
                     //strAcc = "$vectorSize"
                     //状態保存
                     accOldValues = accValues
@@ -232,7 +234,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     accView?.text = strAcc
                     validAcc = true
                     if (saveFlag) {
-                        accBuffer.append("${accValues[1]},")
+                        accBuffer.append("${gravitationalAccelerationValues[2]},")
+                        times++
                     }
                 }
 
@@ -294,6 +297,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
     private fun stopRecord(){
         try {
+            accBuffer.append("${times}回")
             val fileWriter = FileWriter(accPath)
             fileWriter.write(accBuffer.toString())
             fileWriter.flush()
