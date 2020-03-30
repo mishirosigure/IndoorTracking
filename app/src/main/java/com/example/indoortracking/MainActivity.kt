@@ -16,7 +16,6 @@ import java.io.File
 import java.io.FileWriter
 import java.io.IOException
 import kotlin.math.pow
-import kotlin.math.sqrt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
     private val accPath = "${Environment.getExternalStorageDirectory().path}/Evin/acc.csv"
@@ -99,7 +98,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     companion object {
         //閾値
-        const val THRESHOLD = 0.2F
+        const val THRESHOLD = 0.06F
         const val THRESHOLD_MIN = 0.1F
 
         //ローパスフィルタのα値
@@ -201,27 +200,31 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     //切り捨てる
                     accValues = truncation(accValues)
 
+                    for (i in gravitationalAccelerationValues.indices){
+                        if (gravitationalAccelerationValues[i].pow(2) < THRESHOLD && thresHoldFlag) {
+                            gravitationalAccelerationValues[i] = 0F
+                        }
+                    }
+
+
                     //ベクトルの大きさを計算
                     //vectorSize = sqrt((dx*dx + dy*dy + dz*dz).toDouble())
-                    vectorSize =
-                        sqrt(
-                            (gravitationalAccelerationValues[0].pow(2) + gravitationalAccelerationValues[1].pow(
-                                2
-                            ) + gravitationalAccelerationValues[2].pow(2)).toDouble()
-                        )
-
-                    if (true/*vectorSize > THRESHOLD*/ /*dz < 0.0F*/) {
+//                    vectorSize =
+//                        sqrt((gravitationalAccelerationValues[0].pow(2) + gravitationalAccelerationValues[1].pow(2) + gravitationalAccelerationValues[2].pow(2)).toDouble())
+//
+//                    if (vectorSize > THRESHOLD || !thresHoldFlag /*dz < 0.0F*/) {
 //                            if (true/*counted*/) {
-////                                counted = false
+//                                counted = false
 //                                //最大値なら格納
 //                                //vectorSize_max = max(vectorSize, vectorSize_max)
 //                            }
 //                            else if(!counted){
 //                                counted = true
 //                            }
-                    } else {
-                        accValues = floatArrayOf(0.0000F, 0.0000F, 0.0000F)
-                    }
+//                    }
+//                    else{
+//                        gravitationalAccelerationValues = floatArrayOf(0.0000F, 0.0000F, 0.0000F)
+//                    }
 
                     strAcc = "加速度センサー\n " +
                             "X: ${gravitationalAccelerationValues[0]}\n " +
