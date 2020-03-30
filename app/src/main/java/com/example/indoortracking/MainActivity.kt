@@ -18,7 +18,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var accView: TextView? = null
     private var magView: TextView? = null
     private var angeleView: TextView? = null
-    private var diffreanceView: TextView? = null
+    private var distanceView: TextView? = null
     private var higher: TextView? = null
 
     private var strAcc = "加速度センサー\n " +
@@ -99,11 +99,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var speed = 0F
     private var oldSpeed = 0F
     //距離
-    private var difference = 0F
+    private var distance = 0F
     //SensorDelay
     private var sensorDelay = 100000
 
     private var measure = false
+    private var highLowFlag = false
+    private var highLowDistance = 0F
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -126,19 +128,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         accView = findViewById(R.id.acc_value)
         magView = findViewById(R.id.mag_value)
         angeleView = findViewById(R.id.angele_value)
-        diffreanceView = findViewById(R.id.deference_value)
+        distanceView = findViewById(R.id.deference_value)
         higher = findViewById(R.id.highLow)
 
         //Buttonのリスナー
-        saveButton.setOnCheckedChangeListener { _, isChecked ->
+        DistanceButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 measure = true
                 speed = 0F
                 oldSpeed = 0F
-                difference = 0F
+                distance = 0F
             }
             else{
                 measure = false
+            }
+        }
+        highLowButton.setOnCheckedChangeListener{ _, isChecked ->
+            if (isChecked) {
+                highLowFlag = true
+                highLowDistance = 0F
+            }
+            else{
+                highLowFlag = false
             }
         }
     }
@@ -237,10 +248,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         speed += ((gravitationalAccelerationValues[1] + oldvalue) * 0.1F) / 2
                         oldvalue = gravitationalAccelerationValues[1]
                         //距離を台形積分
-                        difference += ((speed + oldSpeed) * 0.1F) / 2
+                        distance += ((speed + oldSpeed) * 0.1F) / 2
                         oldSpeed = speed
-                        diffreanceView?.text = "速度 : $speed\n" +
-                                "距離 : $difference"
+                        distanceView?.text = "速度 : $speed\n" +
+                                "距離 : $distance"
+                    }
+                    if (highLowFlag){
+                        highLowDistance += gravitationalAccelerationValues[2]
+                        if(0 < highLowDistance){
+                            higher?.text = "LOW"
+                        }
+                        else if(0 > highLowDistance){
+                           higher?.text = "HIGH"
+                        }
+                        else{
+                            higher?.text = "0"
+                        }
                     }
                 }
 
