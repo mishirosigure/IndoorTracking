@@ -7,6 +7,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.widget.ImageView
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -289,6 +290,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
                 //デグリー角に変換
                 val degreeDir = Math.toDegrees(orientation[0].toDouble())
+                findViewById<ImageView>(R.id.naviImage).rotation = degreeDir.toFloat()
                 angeleView?.text = "角度 = $degreeDir"
                 //フラグを無効化
                 validAcc = false
