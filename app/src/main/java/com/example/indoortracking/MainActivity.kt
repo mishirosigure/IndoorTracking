@@ -255,7 +255,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                                 "距離 : $distance"
                     }
                     if (highLowFlag){
-                        highLowDistance += gravitationalAccelerationValues[2]
+                        //逆方向の加速度を測定しないようにする
+                        if(counted) {
+                            highLowDistance += gravitationalAccelerationValues[2]
+                        }
+                        else{
+                            counted = true
+                        }
                         if(0 < highLowDistance){
                             higher?.text = "LOW"
                         }
