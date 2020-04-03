@@ -258,9 +258,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         //逆方向の加速度を測定しないようにする
                         if(counted) {
                             highLowDistance += gravitationalAccelerationValues[2]
+                            counted = !counted
                         }
                         else{
-                            counted = true
+                            counted = !counted
                         }
                         if(0 < highLowDistance){
                             higher?.text = "LOW"
