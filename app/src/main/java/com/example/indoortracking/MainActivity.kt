@@ -236,9 +236,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
                     accView?.text = strAcc
                     validAcc = true
-                    if (saveFlag) {
-                        accBuffer.append("${gravitationalAccelerationValues[2]},")
-                        times++
+                    if(counted) {
+                        if (saveFlag) {
+                            accBuffer.append("${gravitationalAccelerationValues[2]},")
+                            times++
+                        }
+                        counted = !counted
+                    }
+                    else{
+                        counted = !counted
                     }
                 }
 
